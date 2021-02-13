@@ -101,15 +101,22 @@ shiftMinutes (Sleep time1 : Wake time2 : rest) =
    in [start_minute .. start_minute + dur - 1] ++ shiftMinutes rest
 shiftMinutes _ = error "Malformed inputs"
 
+findFreqSleepingMinute :: [ShiftEvents] -> [(Int, Int)]
+findFreqSleepingMinute = encode . sort . concatMap shiftMinutes
+
 main = do
   contents <- getContents
   let events = map toEvent . sort . lines $ contents
       shifts = splitByShiftChanges events
+      all_guards = nub . map shiftId $ shifts
       (hours, guard_id) = maximum . map swap . foldl merge [] . sort $ [(shiftId s, shiftSleepingDuration s) | s <- shifts]
       guard_shifts = [s | s <- shifts, shiftId s == guard_id]
-      (freq, freq_min) = maximum . encode . sort . concatMap shiftMinutes $ guard_shifts
+      (freq, freq_min) = maximum . findFreqSleepingMinute $ guard_shifts
+      ((freq2, freq_min2), id2) = maximum [(maximum ((0, -1) : findFreqSleepingMinute [s | s <- shifts, shiftId s == gid]), gid) | gid <- all_guards]
    in do
         -- putStrLn . foldl1 join . map show $ events
         print (guard_id * freq_min)
+        print all_guards
+        print (freq_min2 * id2)
 
 -- print $ sort $ lines contents
